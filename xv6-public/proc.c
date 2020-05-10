@@ -15,6 +15,117 @@ struct {
 static struct proc *initproc;
 
 int nextpid = 1;
+
+#ifdef MULTILEVEL_SCHED
+struct queue {
+  int qsize;
+  int rear;
+  int front;
+  int capacity;
+  struct proc *proc[NPROC];
+};
+struct priority_queue{
+  int qsize;
+  int capacity;
+  struct proc *proc[NPROC+1];
+};
+struct ptmp{
+    int index;
+    struct proc * proc[NPROC];
+};
+
+struct queue rr;
+struct priority_queue fcfs;
+struct ptmp tmp;
+
+void 
+qinit(void)
+{
+  tmp.index = -1;
+  rr.qsize = 0;
+  rr.rear = 0;
+  rr.front = 1;
+  rr.capacity = NPROC;
+  fcfs.qsize = 0;
+  fcfs.capacity = NPROC;
+}
+
+
+
+struct proc*
+depq(struct priority_queue * q)
+{
+  int i, child;
+
+  struct proc * p = q->proc[1];
+  struct proc * last = q->proc[q->qsize--];
+  
+  for(i =1 ; i *2 <= q->qsize ; i = child)
+  {
+   child = i*2;
+   if((child != q->qsize) && (q->proc[child+1]->pid < q->proc[child]->pid))
+   {
+     child ++;
+   }
+   if(last->pid > q->proc[child]->pid)    
+   {
+     q->proc[i] = q->proc[child];
+   }
+   else 
+     break;
+  }
+  q->proc[i] = last; 
+  //cprintf("fcfs deque qsize %d \n",q->qsize);
+  return p;
+}
+
+void 
+enpq(struct proc * p, struct priority_queue * q)
+{
+  int i;
+//  cprintf("enpq pid %d\n",p->pid);
+  if(q->qsize == 0)
+  {
+      q->proc[++q->qsize] = p;
+      return;
+  }
+  else if(q->qsize < q->capacity)   
+  {
+    for(i = ++q->qsize; (i/2!=0) &&((q->proc[i/2]->pid) > p->pid)  ; i/=2)
+    {
+      q->proc[i] = q->proc[i/2];
+    }
+    q->proc[i]  = p;
+  }
+}
+
+struct proc*
+deq(struct queue* q)
+{
+    struct  proc * p;
+    p = q->proc[q->front];
+    q->qsize--;
+    q->front = (q->front+1) % q->capacity;
+    return p;
+}
+
+void 
+enq(struct proc * p, struct queue* q)
+{
+    //When queue is full.
+    if(q->qsize == q->capacity)
+        return;
+    else
+    {
+        q->qsize++;
+        q->rear = (q->rear+1) % q->capacity;
+        q->proc[q->rear] = p; 
+    }
+}
+
+#endif
+
+
 extern void forkret(void);
 extern void trapret(void);
 
@@ -88,7 +199,8 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-
+  p->priority = 0;
+  p->qlevel = 0;
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -111,6 +223,7 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+     
 
   return p;
 }
@@ -124,7 +237,7 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   p = allocproc();
-  
+    
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
@@ -147,9 +260,15 @@ userinit(void)
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
-
   p->state = RUNNABLE;
-
+  
+  #ifdef MULTILEVEL_SCHED
+  if(p->pid %2 == 0)
+    enq(p,&rr);
+  else
+    enpq(p,&fcfs);
+  #endif
+  
   release(&ptable.lock);
 }
 
@@ -215,6 +334,17 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+  
+  #ifdef MULTILEVEL_SCHED
+  
+  if(np->pid %2 == 0)
+    enq(np,&rr); 
+  else{
+    enpq(np,&fcfs); 
+  }
+  #endif
+  
+
 
   release(&ptable.lock);
 
@@ -324,8 +454,76 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
+  // Multilevel scheduler.
+  #ifdef MULTILEVEL_SCHED
+  int cnt  = 0;
   c->proc = 0;
-  
+  cprintf("multilevel sched\n");
+  for(;;){
+    sti(); 
+    acquire(&ptable.lock);        
+    // Do RR scheduling
+    cnt = 0;
+     
+      while(rr.qsize > 0){
+        p = deq(&rr);
+        if(p->state != RUNNABLE){
+          if(p->state != UNUSED){
+      //      cprintf("rr unused %d \n",p->pid);
+            enq(p,&rr);
+            cnt++;
+          }
+          if(cnt >= rr.qsize)
+            break;
+          continue;
+        }
+        cnt = 0;
+      //  cprintf("rr pid %d \n",p->pid);
+        enq(p,&rr);
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+        c->proc = 0;
+        break;
+     }
+    if(cnt >= rr.qsize){
+       while(fcfs.qsize > 0){
+         p = depq(&fcfs);
+         if(p->state != RUNNABLE){
+           if(p->state != UNUSED){
+
+        //     cprintf("not used pid %d \n ",p->pid);
+             tmp.proc[++tmp.index] = p;
+          //   cprintf("tmp qszie %d pid %d \n",tmp.index);
+           }
+           continue;
+         }
+        // cprintf("fcfs pid %d  q size%d \n",p->pid, fcfs.qsize);
+         c->proc = p; 
+         enpq(p,&fcfs);
+         switchuvm(p);
+         p->state = RUNNING;
+         swtch(&(c->scheduler), p->context);
+         switchkvm();
+         c->proc = 0;
+         break;
+       }
+       //cprintf("comeback here\n");
+           
+       while(tmp.index >= 0){
+         enpq(tmp.proc[tmp.index--],&fcfs);
+       }
+       
+       
+    }
+    release(&ptable.lock);
+  }
+
+  // Xv6 RR.
+  #else
+  c->proc = 0;
   for(;;){
     // Enable interrupts on this processor.
     sti();
@@ -351,8 +549,8 @@ scheduler(void)
       c->proc = 0;
     }
     release(&ptable.lock);
-
   }
+  #endif
 }
 
 // Enter scheduler.  Must hold only ptable.lock
@@ -389,6 +587,36 @@ yield(void)
   myproc()->state = RUNNABLE;
   sched();
   release(&ptable.lock);
+}
+
+// Set child proess priority.
+int
+setpriority(int pid, int priority)
+{
+  struct proc *p;
+  
+  //Not proper priority range.
+  if(priority < 0 || priority >10){
+    return -2;
+  }
+  acquire(&ptable.lock);
+  
+  //Check is this pid child.
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(( pid == p->pid) && (p->parent->pid  == myproc()->pid) ){
+      p->priority = priority;
+      return 0;
+    }   
+  } 
+  release(&ptable.lock);
+  return -1;
+
+}
+
+// Get queue level which this proess is involved in.
+int getlev(void)
+{
+  return myproc()->qlevel;
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -438,7 +666,6 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
-
   sched();
 
   // Tidy up.

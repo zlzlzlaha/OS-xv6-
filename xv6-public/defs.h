@@ -120,6 +120,11 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int             setpriority(int, int);
+int             getlev(void);
+#ifdef MULTILEVEL_SCHED
+void            qinit(void);
+#endif 
 
 // swtch.S
 void            swtch(struct context**, struct context*);
