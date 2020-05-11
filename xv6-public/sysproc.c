@@ -74,6 +74,12 @@ sys_sleep(void)
     sleep(&ticks, &tickslock);
   }
   release(&tickslock);
+  
+  #ifdef MLFQ_SCHED
+    myproc()->qtime = 4;
+    myproc()->qlevel = 0;
+  #endif
+  
   return 0;
 }
 
@@ -93,28 +99,30 @@ sys_uptime(void)
 int 
 sys_yield(void)
 {
-
-    yield();
-
-    return 0;
+  #ifdef MLFQ_SCHED
+  myproc()->qtime = 4;
+  myproc()->qlevel = 0;
+  #endif
+  
+  yield();
+  return 0;
 }
-
+#ifdef MLFQ_SCHED
 int
 sys_getlev(void)
 {
-    return getlev();
+   return getlev();
 }
 
 int
 sys_setpriority(void)
 {
-    int aid, apriority;
+  int aid, apriority;
 
-    if(argint(0, &aid) < 0)
-        return -3;
-    if(argint(1, &apriority) < 0) 
-        return -3;
-    return setpriority(aid,apriority);
-
+  if(argint(0, &aid) < 0)
+      return -3;
+  if(argint(1, &apriority) < 0)        
+      return -3;
+  return setpriority(aid,apriority);
 }
-
+#endif

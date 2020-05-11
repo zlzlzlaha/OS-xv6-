@@ -124,6 +124,9 @@ int             setpriority(int, int);
 int             getlev(void);
 #ifdef MULTILEVEL_SCHED
 void            qinit(void);
+#elif MLFQ_SCHED
+void            qinit(void);
+void            priority_boost(void);
 #endif 
 
 // swtch.S
