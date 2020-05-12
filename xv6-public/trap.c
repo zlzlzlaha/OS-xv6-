@@ -108,7 +108,7 @@ trap(struct trapframe *tf)
     if(myproc()->pid % 2 ==0)
       yield();
     #elif MLFQ_SCHED
-   
+ 
     if(ticks % 100 == 0)
        priority_boost();
 
