@@ -258,6 +258,6 @@ int main(int argc, char *argv[])
   printf(1, "done\n");
   printf(1, "[Test 6] finished\n");
 
-  exit();
+  exit(); 
 }
 

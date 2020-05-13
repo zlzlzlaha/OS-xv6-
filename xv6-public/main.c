@@ -27,11 +27,7 @@ main(void)
   consoleinit();   // console hardware
   uartinit();      // serial port
   pinit();         // process table
-  #ifdef MULTILEVEL_SCHED
   qinit();         // scheduling queue init
-  #elif MLFQ_SCHED
-  qinit();
-  #endif
   tvinit();        // trap vectors
   binit();         // buffer cache
   fileinit();      // file table

@@ -72,14 +72,16 @@ sys_sleep(void)
       return -1;
     }
     sleep(&ticks, &tickslock);
+  // Reset time quantum, mlfq level.
+ #ifdef MLFQ_SCHED
+  myproc()->qtime = 4;
+  myproc()->qlevel = 0;
+  #endif
+
   }
   release(&tickslock);
   
-  #ifdef MLFQ_SCHED
-    myproc()->qtime = 4;
-    myproc()->qlevel = 0;
-  #endif
-  
+   
   return 0;
 }
 
@@ -99,6 +101,7 @@ sys_uptime(void)
 int 
 sys_yield(void)
 {
+  // Resset time quantum, mlfq level.
   #ifdef MLFQ_SCHED
   myproc()->qtime = 4;
   myproc()->qlevel = 0;
@@ -107,7 +110,6 @@ sys_yield(void)
   yield();
   return 0;
 }
-#ifdef MLFQ_SCHED
 int
 sys_getlev(void)
 {
@@ -125,4 +127,3 @@ sys_setpriority(void)
       return -3;
   return setpriority(aid,apriority);
 }
-#endif

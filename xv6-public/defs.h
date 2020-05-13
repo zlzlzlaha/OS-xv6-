@@ -9,6 +9,9 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct priority_queue;
+struct ptmp;
+struct queue;
 
 // bio.c
 void            binit(void);
@@ -120,14 +123,18 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+void            qinit(void);
+struct proc*    depq(struct priority_queue*);
+void            enpq(struct proc *, struct priority_queue *);
+struct proc*    derq(struct queue *);
+void            enrq(struct proc*, struct queue*);
+struct proc*    deq(struct priority_queue*);
+void            enq(struct proc*, struct priority_queue*);
+void            priority_boost(void);
+void            percdown(int index, struct priority_queue*);
+void            increase_priority(struct priority_queue*);
 int             setpriority(int, int);
 int             getlev(void);
-#ifdef MULTILEVEL_SCHED
-void            qinit(void);
-#elif MLFQ_SCHED
-void            qinit(void);
-void            priority_boost(void);
-#endif 
 
 // swtch.S
 void            swtch(struct context**, struct context*);
