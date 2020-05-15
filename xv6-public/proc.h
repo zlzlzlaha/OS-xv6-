@@ -36,6 +36,13 @@ struct priority_queue{
   struct proc *proc[NPROC+1];   // Pointer of ptable entry
 };
 
+struct mlfq_queue{
+  int qsize;                    // Number of processes in queue
+  int capacity;                 // Number of receqtible processes
+  struct proc *proc[NPROC+1];   // Pointer of ptable entry
+  struct proc *cproc;            // Current working porcess in queue
+};
+
 // Struct for saving temporary process 
 struct ptmp{
   int index;                    // Array index

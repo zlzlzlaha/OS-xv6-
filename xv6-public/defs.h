@@ -10,6 +10,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 struct priority_queue;
+struct mlfq_queue;
 struct ptmp;
 struct queue;
 
@@ -128,11 +129,11 @@ struct proc*    depq(struct priority_queue*);
 void            enpq(struct proc *, struct priority_queue *);
 struct proc*    derq(struct queue *);
 void            enrq(struct proc*, struct queue*);
-struct proc*    deq(struct priority_queue*);
-void            enq(struct proc*, struct priority_queue*);
+struct proc*    deq(struct mlfq_queue*);
+void            enq(struct proc*, struct mlfq_queue*);
 void            priority_boost(void);
-void            percdown(int index, struct priority_queue*);
-void            increase_priority(struct priority_queue*);
+void            percdown(int index, struct mlfq_queue*);
+void            increase_priority(struct mlfq_queue*);
 int             setpriority(int, int);
 int             getlev(void);
 

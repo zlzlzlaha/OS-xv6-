@@ -17,12 +17,12 @@ static struct proc *initproc;
 int nextpid = 1;
 struct queue rr;
 struct priority_queue fcfs;
-struct priority_queue mlfq[MLFQ_K];
+struct mlfq_queue mlfq[MLFQ_K];
 struct ptmp tmp;
-
-struct proc*
+struct proc dummy;
 
 // Used in Round Robin dequeue operation
+struct proc*
 derq(struct queue* q)
 {
    struct  proc * p;
@@ -72,6 +72,9 @@ qinit(void)
   {
      mlfq[i].qsize =0;
      mlfq[i].capacity = NPROC;
+     dummy.pid = -1;
+     dummy.qtime = -1;
+     mlfq[i].cproc = &dummy;
   }
 }
 #endif
@@ -79,7 +82,7 @@ qinit(void)
 // Used MLFQ deque operation.
 // Same operation with deleating max in max heap.
 struct proc*
-deq(struct priority_queue * q)
+deq(struct mlfq_queue * q)
 {
   int i, child;
 
@@ -103,7 +106,7 @@ deq(struct priority_queue * q)
 
 // Used MLFQ enq operation.
 void 
-enq(struct proc * p, struct priority_queue * q)
+enq(struct proc * p, struct mlfq_queue * q)
 {
   int i;
   if(p->state == UNUSED)
@@ -169,9 +172,15 @@ priority_boost(void)
     
   struct proc * p;
   int i;
-  
+  mlfq[0].cproc = &dummy;
+  for(i=1; i <= mlfq[0].qsize ; i++)
+  {
+    p = mlfq[0].proc[i];
+    p->qtime =4;
+  }
   // Enq all processes in tmp queue to level 0 mlfq. 
   for(i=1; i<MLFQ_K ;i++){
+     mlfq[i].cproc = &dummy ;
    while(mlfq[i].qsize >0){
      p = deq(&mlfq[i]);
      // Reset time quantum and queue level.
@@ -182,19 +191,17 @@ priority_boost(void)
   }
   // Enq all proceeses in not level 9 mlfq to lvel 0 mlfq.
  while(tmp.index >-1){
-    p = tmp.proc[tmp.index--];
-    if(p->qlevel >0){       
-        // Reset time quntum and queue level.
-      p->qlevel =0;
-      p->qtime = 4;
-    }
+    p = tmp.proc[tmp.index--];      
+      // Reset time quntum and queue level.
+    p->qlevel =0;
+    p->qtime = 4;
     enq(p,&mlfq[0]);
   } 
 }
 
 // Used in Build heap operation.
 void 
-percdown(int index, struct priority_queue *q)
+percdown(int index, struct mlfq_queue *q)
 {
   struct proc * t;
   int i,child;
@@ -216,7 +223,7 @@ percdown(int index, struct priority_queue *q)
 // Build heap operation.
 // Used when change priority of middle 
 void 
-increase_priority(struct priority_queue* q){
+increase_priority(struct mlfq_queue* q){
   int i;
   for(i = q->qsize/2 ; i > 0 ; i--)
   {
@@ -585,6 +592,7 @@ scheduler(void)
         }
         // When there is runnable, reset not runnable count.
         cnt = 0;
+      //  cprintf("pid : %d\n", p->pid);
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
@@ -610,6 +618,7 @@ scheduler(void)
            continue;
          }
          c->proc = p; 
+        // cprintf("pid : %d\n",p->pid);
          switchuvm(p);
          p->state = RUNNING;
          swtch(&(c->scheduler), p->context); 
@@ -661,35 +670,57 @@ scheduler(void)
     } 
 
     // When current level is not 0
-    while(clevel > -1 && mlfq[clevel].qsize > 0){
-      p= deq(&mlfq[clevel]);
-      if(p->state != RUNNABLE || p->qtime < 0){ 
-        // Hold which is not RUNNABLE temporary
-        if(p->state != UNUSED && p->state != ZOMBIE ){
+    if(clevel > -1){
+        // When previous process is runnable
+       if((mlfq[clevel].cproc->pid != -1) && (mlfq[clevel].cproc->qtime > 0) && (mlfq[clevel].cproc->state == RUNNABLE) && (mlfq[clevel].cproc->qlevel == clevel)){
+              while(1)
+              {
+                  p = deq(&mlfq[clevel]);
+                  if(p == mlfq[clevel].cproc){
+                      break;
+                  }
+                  tmp.proc[++tmp.index] = p;
+              }
+              p = mlfq[clevel].cproc;
+              goto sched;
+       }
+      else{
+        while( mlfq[clevel].qsize > 0){ 
+          p= deq(&mlfq[clevel]);
+          if(p->state != RUNNABLE || p->qtime < 0){ 
+          // Hold which is not RUNNABLE temporay  
+          if(p->state != UNUSED && p->state != ZOMBIE ){
             tmp.proc[++tmp.index] = p;
-        }
-       continue; 
-      }
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-        
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-      // When process is chaged Zombie through exit()
-      // Do not enq.
-      if(p->state != UNUSED && p->state != ZOMBIE)
-        enq(p,&mlfq[p->qlevel]);
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
-      break;
-    }
+          }
+          continue; 
+          }
+sched:
+          c->proc = p;
+          switchuvm(p);
+          p->state = RUNNING;
+          mlfq[clevel].cproc = p; 
 
+          swtch(&(c->scheduler), p->context);
+          switchkvm();
+          // When process is chaged Zombie through exit()
+          // Do not enq.
+          if(p->state != UNUSED && p->state != ZOMBIE){
+              enq(p,&mlfq[p->qlevel]);
+          }  
+          // Current process can't be runnable.
+         
+         
+          // Process is done running for now.
+          // It should have changed its p->state before coming back.
+          c->proc = 0;
+          break;
+          }
+        }
+    }
     // When there is not runnable process in MLFQ queues.
     if(clevel ==-1){
-         priority_boost();
-    }    
+       priority_boost();
+    }
     // Enq all process in MLFQ again
     while(tmp.index >-1){
       p = tmp.proc[tmp.index--];
@@ -747,7 +778,9 @@ setpriority(int pid, int priority)
   // Find Child pid and check is this pid child.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(( pid == p->pid) && (p->parent->pid  == myproc()->pid) ){
+      acquire(&ptable.lock);
       p->priority = priority;
+      release(&ptable.lock);
       // Rearrange entries in mlfq
       increase_priority(&mlfq[p->qlevel]);
       return 0;

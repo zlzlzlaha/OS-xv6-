@@ -7,6 +7,9 @@
 #include "mmu.h"
 #include "proc.h"
 
+extern struct mlfq_queue mlfq[MLFQ_K];
+extern struct proc dummy;
+
 int
 sys_fork(void)
 {
@@ -103,6 +106,9 @@ sys_yield(void)
 {
   // Resset time quantum, mlfq level.
   #ifdef MLFQ_SCHED
+  if(myproc()->qlevel == 0){
+    mlfq[0].cproc = &dummy;
+  }
   myproc()->qtime = 4;
   myproc()->qlevel = 0;
   #endif
