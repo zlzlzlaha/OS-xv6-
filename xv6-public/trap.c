@@ -13,6 +13,7 @@ struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
+char boost;
 
 void
 tvinit(void)
@@ -51,6 +52,12 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
+      #ifdef MLFQ_SCHED
+      if(ticks % 100 == 0){
+       priority_boost();
+       boost =1;
+      }
+      #endif
       wakeup(&ticks);
       release(&tickslock);
     }
@@ -105,14 +112,16 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER){
     #ifdef MULTILEVEL_SCHED
-    if(myproc()->pid %2 == 0)
       yield();
     #elif MLFQ_SCHED
- 
-    if(ticks % 100 == 0)
-       priority_boost();
-
-    if(myproc()->qtime >0){
+    
+    // When boosting is doen, yield this procss/  
+    if(boost==1){
+      boost = 0;
+      yield();
+    }
+    // MLFQ time quantum policy.
+    else if(myproc()->qtime >0){
       myproc()->qtime --;
       yield();
     }

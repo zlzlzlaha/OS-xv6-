@@ -173,6 +173,11 @@ priority_boost(void)
   struct proc * p;
   int i;
   mlfq[0].cproc = &dummy;
+
+  if(myproc()){
+    myproc()->qtime =4;
+    myproc()->qlevel =0;
+  }
   for(i=1; i <= mlfq[0].qsize ; i++)
   {
     p = mlfq[0].proc[i];
@@ -618,7 +623,7 @@ scheduler(void)
            continue;
          }
          c->proc = p; 
-        // cprintf("pid : %d\n",p->pid);
+//         cprintf("pid : %d\n",p->pid);
          switchuvm(p);
          p->state = RUNNING;
          swtch(&(c->scheduler), p->context); 
@@ -675,6 +680,7 @@ scheduler(void)
        if((mlfq[clevel].cproc->pid != -1) && (mlfq[clevel].cproc->qtime > 0) && (mlfq[clevel].cproc->state == RUNNABLE) && (mlfq[clevel].cproc->qlevel == clevel)){
               while(1)
               {
+                  // find previous process
                   p = deq(&mlfq[clevel]);
                   if(p == mlfq[clevel].cproc){
                       break;
@@ -698,6 +704,7 @@ sched:
           c->proc = p;
           switchuvm(p);
           p->state = RUNNING;
+          // Previous process update
           mlfq[clevel].cproc = p; 
 
           swtch(&(c->scheduler), p->context);
@@ -780,9 +787,9 @@ setpriority(int pid, int priority)
     if(( pid == p->pid) && (p->parent->pid  == myproc()->pid) ){
       acquire(&ptable.lock);
       p->priority = priority;
-      release(&ptable.lock);
       // Rearrange entries in mlfq
       increase_priority(&mlfq[p->qlevel]);
+      release(&ptable.lock);
       return 0;
     }   
   }
