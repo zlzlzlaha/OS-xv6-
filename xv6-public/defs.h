@@ -9,10 +9,6 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
-struct priority_queue;
-struct mlfq_queue;
-struct ptmp;
-struct queue;
 
 // bio.c
 void            binit(void);
@@ -28,7 +24,7 @@ void            panic(char*) __attribute__((noreturn));
 
 // exec.c
 int             exec(char*, char**);
-
+int             exec2(char *, char **, int);
 // file.c
 struct file*    filealloc(void);
 void            fileclose(struct file*);
@@ -124,18 +120,10 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-void            qinit(void);
-struct proc*    depq(struct priority_queue*);
-void            enpq(struct proc *, struct priority_queue *);
-struct proc*    derq(struct queue *);
-void            enrq(struct proc*, struct queue*);
-struct proc*    deq(struct mlfq_queue*);
-void            enq(struct proc*, struct mlfq_queue*);
-void            priority_boost(void);
-void            percdown(int index, struct mlfq_queue*);
-void            increase_priority(struct mlfq_queue*);
-int             setpriority(int, int);
-int             getlev(void);
+int             getadmin(char *);
+int             setmemorylimit(int , int );
+char *          getshmem(int );
+void            list(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -201,6 +189,7 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
+char*           makesharep(pde_t* pgdir);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

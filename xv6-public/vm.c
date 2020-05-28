@@ -53,7 +53,7 @@ walkpgdir(pde_t *pgdir, const void *va, int alloc)
   }
   return &pgtab[PTX(va)];
 }
-
+ 
 // Create PTEs for virtual addresses starting at va that refer to
 // physical addresses starting at pa. va and size might not
 // be page-aligned.
@@ -80,7 +80,7 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
 }
 
 // There is one page table per process, plus one that's used when
-// a CPU is not running any process (kpgdir). The kernel uses the
+// a CPU is not running any process (kpgdir);. The kernel uses the
 // current process's page table during system calls and interrupts;
 // page protection bits prevent user code from using the kernel's
 // mappings.
@@ -243,7 +243,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       deallocuvm(pgdir, newsz, oldsz);
       kfree(mem);
       return 0;
-    }
+    } 
   }
   return newsz;
 }
@@ -369,7 +369,7 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   uint n, va0;
 
   buf = (char*)p;
-  while(len > 0){
+  while(len > 0){ 
     va0 = (uint)PGROUNDDOWN(va);
     pa0 = uva2ka(pgdir, (char*)va0);
     if(pa0 == 0)
@@ -384,11 +384,29 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   }
   return 0;
 }
+//PAGEBREAK!
+// Blank page.
+//PAGEBREAK!
+// Blank page.
+//PAGEBREAK!
+// Blank page.
 
-//PAGEBREAK!
-// Blank page.
-//PAGEBREAK!
-// Blank page.
-//PAGEBREAK!
-// Blank page.
+char* 
+makesharep(pde_t* pgdir)
+{
+ // pte_t *pte;
+  pte_t *pde;
+  //uint pa; 
+  char *mem;
+   
+  if((mem = kalloc()) == 0)
+     return 0;
+  pde = walkpgdir(pgdir, mem, 0); 
+  //pte = walkpgdir(pgdir,(void *)mem,0);
+  *pde = *pde| PTE_U | PTE_P | PTE_W;
+  
+  return  mem;
+}
+
+
 

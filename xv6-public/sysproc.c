@@ -7,8 +7,6 @@
 #include "mmu.h"
 #include "proc.h"
 
-extern struct mlfq_queue mlfq[MLFQ_K];
-extern struct proc dummy;
 
 int
 sys_fork(void)
@@ -74,18 +72,9 @@ sys_sleep(void)
       release(&tickslock);
       return -1;
     }
-     #ifdef MLFQ_SCHED
-    mlfq[myproc()->qlevel].cproc = &dummy;  
-    myproc()->qtime = 4;
-    myproc()->qlevel = 0;
-    #endif
     sleep(&ticks, &tickslock);
-  // Reset time quantum, mlfq level.
-  
   }
   release(&tickslock);
-  
-   
   return 0;
 }
 
@@ -102,33 +91,66 @@ sys_uptime(void)
   return xticks;
 }
 
+
 int 
-sys_yield(void)
+sys_getadmin(void)
 {
-  // Resset time quantum, mlfq level.
-  #ifdef MLFQ_SCHED
-  mlfq[myproc()->qlevel].cproc = &dummy;
-  myproc()->qtime = 4;
-  myproc()->qlevel = 0;
-  #endif
-  
-  yield();
-  return 0;
+  char *str; 
+  if(argstr(0,&str) <0)
+      return -1;
+  return getadmin(str);
 }
-int
-sys_getlev(void)
+
+int 
+sys_exec2(void)
 {
-   return getlev();
+  char *path, *argv[MAXARG];
+  int i;
+  int stack_size;
+  uint uargv, uarg;
+
+  if(argstr(0, &path) < 0 || argint(1, (int*)&uargv) < 0 || argint(2,&stack_size) <0 )
+  {
+    return -1;
+  }
+
+  memset(argv, 0, sizeof(argv));
+  for(i=0;; i++){
+    if(i >= NELEM(argv))
+      return -1;
+    if(fetchint(uargv+4*i, (int*)&uarg) < 0)
+      return -1;
+    if(uarg == 0){
+      argv[i] = 0;
+      break;
+    }
+    if(fetchstr(uarg, &argv[i]) < 0)
+      return -1;
+  }
+
+  return exec2(path,argv,stack_size);
+}
+
+int 
+sys_setmemorylimit(void)
+{
+  int pid, limit;
+  if( argint(0,&pid)||argint(1,&limit) < 0)
+      return -1;
+  return (setmemorylimit(pid,limit));
+}
+int 
+sys_getshmem(void)
+{
+  int pid;
+  if(argint(0,&pid) < 0)
+     return -1;
+ return (int)getshmem(pid); 
 }
 
 int
-sys_setpriority(void)
-{
-  int aid, apriority;
-
-  if(argint(0, &aid) < 0)
-      return -3;
-  if(argint(1, &apriority) < 0)        
-      return -3;
-  return setpriority(aid,apriority);
+sys_list(void)
+{ 
+   list();
+   return 0;
 }

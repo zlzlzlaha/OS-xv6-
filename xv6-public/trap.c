@@ -13,7 +13,6 @@ struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
-char boost;
 
 void
 tvinit(void)
@@ -52,12 +51,6 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
-      #ifdef MLFQ_SCHED
-      if(ticks % 100 == 0){
-       priority_boost();
-       boost =1;
-      }
-      #endif
       wakeup(&ticks);
       release(&tickslock);
     }
@@ -84,6 +77,12 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+   /*
+  case 14 : 
+    switchkvm();
+    switchuvm(myproc());
+    break;
+    */
 
   //PAGEBREAK: 13
   default:
@@ -110,32 +109,9 @@ trap(struct trapframe *tf)
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
-     tf->trapno == T_IRQ0+IRQ_TIMER){
-    #ifdef MULTILEVEL_SCHED
-      yield();
-    #elif MLFQ_SCHED
-    
-    // When boosting is doen, yield this procss/  
-    if(boost==1){
-      boost = 0;
-      yield();
-    }
-    // MLFQ time quantum policy.
-    else if(myproc()->qtime >0){
-      myproc()->qtime --;
-      yield();
-    }
-    else if(myproc()->qlevel < MLFQ_K-1){
-      myproc()->qlevel++;
-      myproc()->qtime = myproc()->qlevel * 2+4;
-      yield();
-    }
-    else{
-      myproc()->qtime --;
-      yield();
-    } 
-    #endif
-   }
+     tf->trapno == T_IRQ0+IRQ_TIMER)
+    yield();
+
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
     exit();

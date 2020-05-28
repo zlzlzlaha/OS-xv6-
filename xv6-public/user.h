@@ -23,11 +23,12 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-void yield(void);
-#ifdef MLFQ_SCHED
-int getlev(void);
-int setpriority(int, int);
-#endif
+int getadmin(char *);
+int exec2(char *, char **, int);
+int setmemorylimit(int, int);
+char * getshmem(int);
+void list(void);
+
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
