@@ -124,6 +124,8 @@ int             getadmin(char *);
 int             setmemorylimit(int , int );
 char *          getshmem(int );
 void            list(void);
+void            update_exec_sp(struct proc *);
+
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -190,6 +192,8 @@ void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
 char*           makesharep(pde_t* pgdir);
+void            updatesharep(pde_t* pgdir , char* sharep, int my);
+void            deallocsharep(pde_t* pgdir, char * sharep);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

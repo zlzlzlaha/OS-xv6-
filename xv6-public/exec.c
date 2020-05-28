@@ -7,6 +7,7 @@
 #include "x86.h"
 #include "elf.h"
 
+
 int
 exec(char *path, char **argv)
 {
@@ -96,9 +97,15 @@ exec(char *path, char **argv)
   // Commit to the user image.
   oldpgdir = curproc->pgdir;
   curproc->pgdir = pgdir;
+  /*
+  updatesharep(curproc->pgdir,curproc->sharep,1);
 
-  //TEST
-  curproc->sharep = makesharep(curproc->pgdir);
+  // Update other processe's share page permissions in this process's pgdir
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state != UNUSED && p->state != ZOMBIE && p->pid != curproc->pid)
+       updatesharep(curproc->pgdir,p->sharep,1);
+  }
+*/update_exec_sp(curproc);
   curproc->sz = sz;
   curproc->tf->eip = elf.entry;  // main
   curproc->tf->esp = sp;
@@ -133,7 +140,6 @@ exec2(char *path, char **argv, int stacksize)
 
   if(myproc()->admin != 1 || (stacksize < 1) || (stacksize >100)){
     end_op();
-    cprintf("exec2: fail\n");
     return -1;
   }
    if((ip = namei(path)) == 0){
@@ -211,6 +217,7 @@ exec2(char *path, char **argv, int stacksize)
   // Commit to the user image.
   oldpgdir = curproc->pgdir;
   curproc->pgdir = pgdir;
+  update_exec_sp(curproc);
   curproc->sz = sz;
   curproc->tf->eip = elf.entry;  // main
   curproc->tf->esp = sp;

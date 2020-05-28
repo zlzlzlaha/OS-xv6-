@@ -11,7 +11,6 @@ struct {
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
-
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -92,7 +91,7 @@ found:
   p->admin = 0;
   p->limit =0;
   p->time = ticks;    
-
+  p->sharep = 0;
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -151,7 +150,7 @@ userinit(void)
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
-
+  p->sharep = makesharep(p->pgdir);
   p->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -167,7 +166,6 @@ growproc(int n)
 
   sz = curproc->sz;
   
-  cprintf("pid : %d  sz : %d\n",curproc->pid,sz);
   if(curproc->limit != 0 && sz +n > curproc->limit)
       return -1;
   if(n > 0){
@@ -190,8 +188,8 @@ fork(void)
 {
   int i, pid;
   struct proc *np;
+  struct proc *p;
   struct proc *curproc = myproc();
-
   // Allocate process.
   if((np = allocproc()) == 0){
     return -1;
@@ -210,13 +208,6 @@ fork(void)
   
   if((np->sharep = makesharep(np->pgdir)) == 0)
     return -1;
-  //;   np->sharep = kalloc();
- cprintf("pid %d , address %x\n",np->pid, np->sharep); 
- /*
- *(np->sharep) ='a';
- *( np->sharep+1) = '1';
- *(np->sharep+2) = 0;
-   */
 
   np->sz = curproc->sz;
   np->parent = curproc;
@@ -239,6 +230,16 @@ fork(void)
   np->limit = curproc->limit;
   np->time = ticks;
   np->state = RUNNABLE;
+ 
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+     if(p->state != UNUSED && p->state != ZOMBIE && p->pid != np->pid){
+        // Update np's shared page permission in other process's pgdir.
+          updatesharep(p->pgdir,np->sharep,0);
+       // Update other process's shared page permission in other process's pgdir.
+        updatesharep(np->pgdir,p->sharep,0);
+     }
+  }
+ 
 
   release(&ptable.lock);
 
@@ -273,6 +274,18 @@ exit(void)
 
   acquire(&ptable.lock);
 
+  
+  // Update other process's pgdir about this process's shared page permission.
+   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != ZOMBIE && p->state != UNUSED && p->pid != curproc->pid){
+        updatesharep(p->pgdir,curproc->sharep,-1); // this page cannot access in user.
+      }
+  }
+
+  // Deallocate shared page.
+  deallocsharep(curproc->pgdir,curproc->sharep);
+  curproc->sharep = 0;
+    
   // Parent might be sleeping in wait().
   wakeup1(curproc->parent);
 
@@ -591,7 +604,7 @@ setmemorylimit(int pid, int limit)
 {
    struct proc *p;
    
-   if(limit < 0)
+   if(limit < 0 || myproc()->admin != 1)
      return -1;
    acquire(&ptable.lock);
    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -629,10 +642,24 @@ list(void)
    cprintf("%s         | %s | %s     | %s     |%s\n ","NAME","PID","TIME (ms)","MEMORY (bytes)", "MEMLIM (bytes)");
    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
    {
-      if(p->state != UNUSED && p->state != ZOMBIE)
+      if(p->state != UNUSED )
       {
         cprintf("%s    %d     %d      %d       %d\n",p->name,p->pid, 10 * (ticks -p->time) ,p->sz, p->limit);
       }
    }   
    release(&ptable.lock);
 }
+
+void
+update_exec_sp(struct proc * curproc)
+{
+  struct proc * p;
+  updatesharep(curproc->pgdir,curproc->sharep,1);
+
+  // Update other processe's share page permissions in this process's pgdir
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state != UNUSED && p->state != ZOMBIE && p->pid != curproc->pid)
+       updatesharep(curproc->pgdir,p->sharep,1);
+  }  
+}
+

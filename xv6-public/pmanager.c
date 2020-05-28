@@ -23,23 +23,13 @@ int main(int argc, char *argv[])
   stacksize =0;
   //get pmanager admin in first
   getadmin("2016025687");
-  /*gets(password, 15);
-  password[strlen(password) - 1] = 0;
-  printf(1, "getadmin with password %s\n", password);
-  ret = getadmin(password);
-  printf(1, "getadmin returned %d\n", ret);
-  ret = setmemorylimit(getpid(), 1000000);
-  printf(1, "setmemorylimit returned %d\n", ret);
-  ret = exec2("zombie", argv2, 10);
-  printf(1, "exec2 returned %d\n", ret);
-  exit();
-  */
-   while(1)
+
+  while(1)
   {
     printf(1,"> ");
     gets(command,100);
     index = find_space(command);
-    strcpyn(tmp,command,index);
+    strcpyn(tmp,command,index); // get first word of command
 
     if(strcmp("list",tmp)==0)
     {
@@ -126,7 +116,7 @@ int main(int argc, char *argv[])
     }
     else if(strcmp("exit",tmp)==0)
     { 
-        exit();
+        break;
     }
     else
     {
@@ -134,6 +124,12 @@ int main(int argc, char *argv[])
     }
 
   }
+
+  //reap all children
+  while((pid=wait())!=-1);
+
+  printf(1,"bye~\n");
+  exit();
 }
 
 int find_space(char *s1)

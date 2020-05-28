@@ -395,18 +395,48 @@ char*
 makesharep(pde_t* pgdir)
 {
  // pte_t *pte;
-  pte_t *pde;
+  pte_t *pte;
   //uint pa; 
   char *mem;
-   
+  
   if((mem = kalloc()) == 0)
      return 0;
-  pde = walkpgdir(pgdir, mem, 0); 
-  //pte = walkpgdir(pgdir,(void *)mem,0);
-  *pde = *pde| PTE_U | PTE_P | PTE_W;
+  pte = walkpgdir(pgdir, mem, 0); 
+  *pte = *pte| PTE_U | PTE_P | PTE_W;
   
   return  mem;
 }
 
+void
+deallocsharep(pde_t* pgdir, char * sharep)
+{
+  //pte_t *pte;
+  
+ // pte =walkpgdir(pgdir,sharep,0);
+    
+ // *pte =  *pte & ~PTE_U;
+  kfree(sharep);  
+}
 
+//Upate shared page permission in pgdir.
+void 
+updatesharep(pde_t* pgdir , char* sharep, int my)
+{
+  pte_t *pte; 
 
+  pte = walkpgdir(pgdir,sharep,0);
+   
+  // When other processces shared page.    
+  if(my == 0){
+    *pte = *pte | PTE_U | PTE_P;
+    *pte = *pte & ~PTE_W;
+  }
+  // Update my shared page permission.
+  else if (my ==1){
+    *pte = *pte | PTE_U |PTE_P |PTE_W;
+  }
+  else{  // Whe page is deallocated.
+    *pte = *pte | PTE_W;
+    *pte = *pte & ~ PTE_U;
+  }
+}    

@@ -1,3 +1,4 @@
+./pmanager.c
 ./grep.c
 ./umalloc.c
 ./initcode.S
@@ -17,6 +18,7 @@
 ./forktest.c
 ./memide.c
 ./cat.c
+./p2_memory_test.c
 ./picirq.c
 ./stressfs.c
 ./ide.c
@@ -43,6 +45,7 @@
 ./exec.c
 ./kill.c
 ./trap.c
+./p2_shmem_test.c
 ./bootasm.S
 ./traps.h
 ./date.h
@@ -53,10 +56,12 @@
 ./kalloc.c
 ./proc.h
 ./syscall.c
+./vectors.S
 ./sysfile.c
 ./defs.h
 ./sysproc.c
 ./pipe.c
+./p2_stack_test.c
 ./init.c
 ./entryother.S
 ./ln.c
@@ -65,6 +70,7 @@
 ./vm.c
 ./zombie.c
 ./ioapic.c
+./p2_admin_test.c
 ./user.h
 ./ls.c
 ./bootmain.c
