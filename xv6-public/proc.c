@@ -88,6 +88,8 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+
+  // Set initial condition of project 2.
   p->admin = 0;
   p->limit =0;
   p->time = ticks;    
@@ -150,6 +152,8 @@ userinit(void)
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
+
+  // make user init process's shared page.
   p->sharep = makesharep(p->pgdir);
   p->state = RUNNABLE;
 
@@ -166,8 +170,10 @@ growproc(int n)
 
   sz = curproc->sz;
   
+  // When try to get new memory more than limited size.
   if(curproc->limit != 0 && sz +n > curproc->limit)
       return -1;
+
   if(n > 0){
     if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
       return -1;
@@ -205,7 +211,6 @@ fork(void)
   }
 
   // Create Shared page for proc.
-  
   if((np->sharep = makesharep(np->pgdir)) == 0)
     return -1;
 
@@ -226,16 +231,22 @@ fork(void)
   pid = np->pid;
 
   acquire(&ptable.lock);
+
+  //get parent's admin, limit 
   np->admin = curproc->admin;
   np->limit = curproc->limit;
+
+  //save current time
   np->time = ticks;
   np->state = RUNNABLE;
  
+
+  // Update shared page permission.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
      if(p->state != UNUSED && p->state != ZOMBIE && p->pid != np->pid){
         // Update np's shared page permission in other process's pgdir.
           updatesharep(p->pgdir,np->sharep,0);
-       // Update other process's shared page permission in other process's pgdir.
+       // Update other process's shared page permission in np process's pgdir.
         updatesharep(np->pgdir,p->sharep,0);
      }
   }
@@ -575,22 +586,36 @@ getadmin(char *password)
 {
   int i;
   int length = 0;
+  int pass_length =0;
   i = 0;
+
+  // Get input password length
   while(1){
     if(password[length]=='\0')
-        break;
+       break;
     length++;
   }
-  if(length != 10)
+
+  // Get orign pasword length
+  while(1){
+    if(pass[pass_length]=='\0')
+      break;
+    pass_length++;
+  }
+
+  // Check length of input password
+  if(length != pass_length)
       return -1;
+
+  // Check same.
   else{
-    for(i = 0; i <10 ; i++){
+    for(i = 0; i <pass_length ; i++){
         if(password[i] != pass[i])
             return -1;
     }
     
     acquire(&ptable.lock);
-    myproc()->admin = 1;
+    myproc()->admin = 1; // get admin 
     release(&ptable.lock);
     return 0; 
   }
@@ -598,12 +623,12 @@ getadmin(char *password)
 }
 
 
-
 int 
 setmemorylimit(int pid, int limit)
 {
    struct proc *p;
-   
+  
+   // When limit is negative or not admin.
    if(limit < 0 || myproc()->admin != 1)
      return -1;
    acquire(&ptable.lock);
@@ -619,6 +644,7 @@ setmemorylimit(int pid, int limit)
    release(&ptable.lock);
    return -1;
 }
+
 char *
 getshmem(int pid)
 {
@@ -631,7 +657,7 @@ getshmem(int pid)
       }
    }
    release(&ptable.lock);
-   return (char *) 0;
+   return (char *) 0; //when failed to find shared page
 }
 
 void
@@ -639,24 +665,26 @@ list(void)
 {
    struct proc * p;
    acquire(&ptable.lock);
-   cprintf("%s         | %s | %s     | %s     |%s\n ","NAME","PID","TIME (ms)","MEMORY (bytes)", "MEMLIM (bytes)");
-   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-   {
-      if(p->state != UNUSED )
-      {
-        cprintf("%s    %d     %d      %d       %d\n",p->name,p->pid, 10 * (ticks -p->time) ,p->sz, p->limit);
+   cprintf("%s           |      %s      |   %s  | %s |%s\n ","NAME","PID","TIME (ms)","MEMORY (bytes)", "MEMLIM (bytes)");
+   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != UNUSED ){
+        cprintf("%s              %d             %d              %d              %d\n",p->name,p->pid, 10 * (ticks -p->time) ,p->sz, p->limit);
       }
    }   
    release(&ptable.lock);
 }
 
+
+// This fucntion is used in exec to update shared page permmision.
 void
 update_exec_sp(struct proc * curproc)
 {
   struct proc * p;
+
+  // Update current process's shared page permission
   updatesharep(curproc->pgdir,curproc->sharep,1);
 
-  // Update other processe's share page permissions in this process's pgdir
+  // Update other processe's share page permissions in current process's pgdir
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state != UNUSED && p->state != ZOMBIE && p->pid != curproc->pid)
        updatesharep(curproc->pgdir,p->sharep,1);

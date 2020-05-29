@@ -391,12 +391,12 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 //PAGEBREAK!
 // Blank page.
 
+
+// Make self shared page and set user wirte permission.
 char* 
 makesharep(pde_t* pgdir)
 {
- // pte_t *pte;
   pte_t *pte;
-  //uint pa; 
   char *mem;
   
   if((mem = kalloc()) == 0)
@@ -407,14 +407,13 @@ makesharep(pde_t* pgdir)
   return  mem;
 }
 
+// Free shared page.
 void
 deallocsharep(pde_t* pgdir, char * sharep)
 {
-  //pte_t *pte;
-  
- // pte =walkpgdir(pgdir,sharep,0);
-    
- // *pte =  *pte & ~PTE_U;
+  pte_t *pte; 
+  pte =walkpgdir(pgdir,sharep,0);
+  *pte =  *pte & ~PTE_U;
   kfree(sharep);  
 }
 
@@ -429,7 +428,7 @@ updatesharep(pde_t* pgdir , char* sharep, int my)
   // When other processces shared page.    
   if(my == 0){
     *pte = *pte | PTE_U | PTE_P;
-    *pte = *pte & ~PTE_W;
+    *pte = *pte & ~PTE_W; // eliminate write permission.
   }
   // Update my shared page permission.
   else if (my ==1){
@@ -437,6 +436,6 @@ updatesharep(pde_t* pgdir , char* sharep, int my)
   }
   else{  // Whe page is deallocated.
     *pte = *pte | PTE_W;
-    *pte = *pte & ~ PTE_U;
+    *pte = *pte & ~ PTE_U; // eliminate User permission.
   }
 }    

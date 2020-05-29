@@ -97,18 +97,14 @@ exec(char *path, char **argv)
   // Commit to the user image.
   oldpgdir = curproc->pgdir;
   curproc->pgdir = pgdir;
-  /*
-  updatesharep(curproc->pgdir,curproc->sharep,1);
-
-  // Update other processe's share page permissions in this process's pgdir
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->state != UNUSED && p->state != ZOMBIE && p->pid != curproc->pid)
-       updatesharep(curproc->pgdir,p->sharep,1);
-  }
-*/update_exec_sp(curproc);
+  
+  // Update all shared pages permission in current process's pgdir
+  update_exec_sp(curproc);
   curproc->sz = sz;
   curproc->tf->eip = elf.entry;  // main
   curproc->tf->esp = sp;
+
+  // Reset admin and limit.
   curproc->admin =0;
   curproc->limit =0;
   switchuvm(curproc);
@@ -138,13 +134,13 @@ exec2(char *path, char **argv, int stacksize)
   struct proc *curproc = myproc();
   begin_op();
 
+  // When not match condition.
   if(myproc()->admin != 1 || (stacksize < 1) || (stacksize >100)){
     end_op();
     return -1;
   }
    if((ip = namei(path)) == 0){
     end_op();
-    cprintf("exec2: fail\n");
     return -1;
   }
   ilock(ip);
@@ -217,10 +213,14 @@ exec2(char *path, char **argv, int stacksize)
   // Commit to the user image.
   oldpgdir = curproc->pgdir;
   curproc->pgdir = pgdir;
+
+  // Update all shared pages permission in current process's pgdir
   update_exec_sp(curproc);
   curproc->sz = sz;
   curproc->tf->eip = elf.entry;  // main
   curproc->tf->esp = sp;
+
+  // Reset admin, limit information.
   curproc->admin =0;
   curproc->limit =0;
   switchuvm(curproc);
