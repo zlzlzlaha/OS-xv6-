@@ -24,7 +24,8 @@ int main(int argc, char *argv[])
 
   //get pmanager admin in first
   getadmin("2016025687");
-
+  printf(1,"[Process Manager]\n");
+  printf(1,"\n");
   while(1)
   {
     printf(1,"> ");

@@ -664,11 +664,13 @@ void
 list(void)
 {
    struct proc * p;
+   uint current_tick;
    acquire(&ptable.lock);
+   current_tick = ticks;
    cprintf("%s           |      %s      |   %s  | %s |%s\n ","NAME","PID","TIME (ms)","MEMORY (bytes)", "MEMLIM (bytes)");
    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != UNUSED ){
-        cprintf("%s              %d             %d              %d              %d\n",p->name,p->pid, 10 * (ticks -p->time) ,p->sz, p->limit);
+        cprintf("%s              %d             %d              %d              %d\n",p->name,p->pid, 10 * (current_tick -p->time) ,p->sz, p->limit);
       }
    }   
    release(&ptable.lock);

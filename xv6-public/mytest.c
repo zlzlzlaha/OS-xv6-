@@ -3,7 +3,8 @@
 #include "user.h"
 #define N 4096
 
-// test fork stack
+/*
+// test fork stacksize , admin
 void f(int depth)
 {
   volatile char arr[1000] = {0};
@@ -14,11 +15,17 @@ void f(int depth)
 
 int main(int argc, char *argv[])
 {
-  fork();
+  int pid;
+  getadmin("2016025687");
+  pid = fork();
+  if(pid == 0)
+      if(setmemorylimit(getpid(),1000000)!=0) //admin test
+          printf(1,"this should not be printed\n");
   f(1);
   exit();
   return 0;
 }
+*/
 
 
 // basin test of shmem
