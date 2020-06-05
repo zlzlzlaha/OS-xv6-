@@ -633,7 +633,7 @@ setmemorylimit(int pid, int limit)
      return -1;
    acquire(&ptable.lock);
    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->pid == pid){
+      if(p->pid == pid && p->state != UNUSED){
           if(p->sz <= limit || limit == 0){
             p->limit = limit;
             release(&ptable.lock);
@@ -685,11 +685,12 @@ update_exec_sp(struct proc * curproc)
 
   // Update current process's shared page permission
   updatesharep(curproc->pgdir,curproc->sharep,1);
-
+  acquire(&ptable.lock);
   // Update other processe's share page permissions in current process's pgdir
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state != UNUSED && p->state != ZOMBIE && p->pid != curproc->pid)
        updatesharep(curproc->pgdir,p->sharep,1);
-  }  
+  }
+  release(&ptable.lock);
 }
 
