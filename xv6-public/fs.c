@@ -458,6 +458,8 @@ stati(struct inode *ip, struct stat *st)
   st->type = ip->type;
   st->nlink = ip->nlink;
   st->size = ip->size;
+  st->mode = ip->mode;
+  str_cpy(st->username,ip->username);
 }
 
 //PAGEBREAK!
@@ -892,13 +894,13 @@ void init_usertable(void)
     if(dirlink(dp, name, ip->inum) < 0)
        panic("create: dirlink");
 
-    iunlockput(dp);
+    iunlock(dp);
 
     writei(ip,(char*)&usertable,0,sizeof(usertable)); 
    
    
 
-    iunlockput(ip);
+    iunlock(ip);
   }
 
   // when userlist already exist
@@ -914,7 +916,7 @@ void init_usertable(void)
        }
    }
    cprintf("\n");
-   iunlockput(ip);
+   iunlock(ip);
   }
 
   end_op();

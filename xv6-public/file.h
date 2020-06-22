@@ -21,6 +21,8 @@ struct inode {
   short major;
   short minor;
   short nlink;
+  char username[16];
+  uint mode;
   uint size;
   uint addrs[NDIRECT+1];
 };

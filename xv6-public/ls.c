@@ -3,6 +3,8 @@
 #include "user.h"
 #include "fs.h"
 
+#define MODE_MASK 63
+
 char*
 fmtname(char *path)
 {
@@ -20,6 +22,40 @@ fmtname(char *path)
   memmove(buf, p, strlen(p));
   memset(buf+strlen(p), ' ', DIRSIZ-strlen(p));
   return buf;
+}
+
+void print_mode(uint mode, short type)
+{
+    mode = mode & MODE_MASK;
+    if(type == 1)
+       printf(1,"d");
+    else if(type == 2)
+        printf(1,"-");
+    if((mode & MODE_RUSR) == MODE_RUSR)
+       printf(1, "r");
+    else
+       printf(1,"-");
+    if((mode & MODE_WUSR) == MODE_WUSR)
+       printf(1, "w");
+    else
+       printf(1,"-");
+    if((mode & MODE_XUSR) == MODE_XUSR)
+       printf(1, "x");
+    else
+       printf(1,"-");
+    if((mode & MODE_ROTH) == MODE_ROTH)
+       printf(1, "r");
+    else
+       printf(1,"-");
+    if((mode & MODE_WOTH) == MODE_WOTH)
+       printf(1, "w");
+    else
+       printf(1,"-");
+    if((mode & MODE_XOTH) == MODE_XOTH)
+       printf(1, "x ");
+    else
+       printf(1,"- ");
+    
 }
 
 void
@@ -43,7 +79,9 @@ ls(char *path)
 
   switch(st.type){
   case T_FILE:
-    printf(1, "%s %d %d %d\n", fmtname(path), st.type, st.ino, st.size);
+    printf(1, "%s ", fmtname(buf));
+    print_mode(st.mode,st.type);
+    printf(1,"%s %d %d %d\n", st.username,st.type, st.ino, st.size);
     break;
 
   case T_DIR:
@@ -63,7 +101,9 @@ ls(char *path)
         printf(1, "ls: cannot stat %s\n", buf);
         continue;
       }
-      printf(1, "%s %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
+      printf(1, "%s ", fmtname(buf));
+      print_mode(st.mode,st.type);
+      printf(1,"%s %d %d %d\n", st.username,st.type, st.ino, st.size);
     }
     break;
   }
