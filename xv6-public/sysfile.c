@@ -72,9 +72,24 @@ sys_read(void)
   struct file *f;
   int n;
   char *p;
+ // struct stat tmp;
 
-  if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
+  if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0){
+      /*
+    if(argfd(0,0,&f)<0)
+        cprintf("fd\n");
+    if(argint(2,&n) <0)
+        cprintf("int\n");
+    if(argptr(1,&p,n)<0)
+        cprintf("ptr\n");
+        */
+ //   filestat(f,&tmp);
+
+//    cprintf("dev %d ino %d type %d size %d  \n", tmp.dev,tmp.ino, tmp.type, tmp.size);
+
     return -1;
+  }
+
   return fileread(f, p, n);
 }
 
@@ -442,3 +457,36 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+
+
+int 
+sys_useradd(void)
+{
+  char * username;
+  char * password;
+
+  if(argstr(0,&username) < 0 || argstr(1,&password) < 0)
+     return -1;
+
+  return useradd(username,password);
+}
+
+int
+sys_userdel(void)
+{
+  char * username;
+  
+  if(argstr(0,&username) < 0)
+    return -1;
+
+  return userdel(username);  
+}
+ 
+
+
+int sys_init_usertable(void)
+{
+    init_usertable();
+    return 0;
+}
+

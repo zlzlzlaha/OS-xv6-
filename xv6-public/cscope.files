@@ -1,4 +1,3 @@
-./pmanager.c
 ./grep.c
 ./umalloc.c
 ./initcode.S
@@ -15,10 +14,10 @@
 ./mp.h
 ./fs.c
 ./swtch.S
+./p3_useradd.c
 ./forktest.c
 ./memide.c
 ./cat.c
-./p2_memory_test.c
 ./picirq.c
 ./stressfs.c
 ./ide.c
@@ -31,8 +30,10 @@
 ./mkdir.c
 ./printf.c
 ./syscall.h
+./p3_chmod.c
 ./main.c
 ./mp.c
+./login.c
 ./elf.h
 ./fs.h
 ./fcntl.h
@@ -45,7 +46,6 @@
 ./exec.c
 ./kill.c
 ./trap.c
-./p2_shmem_test.c
 ./bootasm.S
 ./traps.h
 ./date.h
@@ -61,7 +61,6 @@
 ./defs.h
 ./sysproc.c
 ./pipe.c
-./p2_stack_test.c
 ./init.c
 ./entryother.S
 ./ln.c
@@ -69,8 +68,8 @@
 ./trapasm.S
 ./vm.c
 ./zombie.c
+./p3_userdel.c
 ./ioapic.c
-./p2_admin_test.c
 ./user.h
 ./ls.c
 ./bootmain.c

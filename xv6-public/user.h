@@ -23,12 +23,9 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int getadmin(char *);
-int exec2(char *, char **, int);
-int setmemorylimit(int, int);
-char * getshmem(int);
-void list(void);
-
+int useradd(char *, char *);
+int userdel(char *);
+void init_usertable(void);
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);

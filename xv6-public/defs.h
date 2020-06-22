@@ -10,6 +10,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -24,7 +25,7 @@ void            panic(char*) __attribute__((noreturn));
 
 // exec.c
 int             exec(char*, char**);
-int             exec2(char *, char **, int);
+
 // file.c
 struct file*    filealloc(void);
 void            fileclose(struct file*);
@@ -52,6 +53,9 @@ struct inode*   nameiparent(char*, char*);
 int             readi(struct inode*, char*, uint, uint);
 void            stati(struct inode*, struct stat*);
 int             writei(struct inode*, char*, uint, uint);
+int             useradd(char * , char *);
+int             userdel(char *);
+void            init_usertable(void);
 
 // ide.c
 void            ideinit(void);
@@ -120,11 +124,6 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-int             getadmin(char *);
-int             setmemorylimit(int , int );
-char *          getshmem(int );
-void            list(void);
-void            update_exec_sp(struct proc *);
 
 
 // swtch.S
@@ -191,9 +190,6 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
-char*           makesharep(pde_t* pgdir);
-void            updatesharep(pde_t* pgdir , char* sharep, int my);
-void            deallocsharep(pde_t* pgdir, char * sharep);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

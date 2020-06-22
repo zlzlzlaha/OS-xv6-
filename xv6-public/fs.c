@@ -27,6 +27,19 @@ static void itrunc(struct inode*);
 // only one device
 struct superblock sb; 
 
+
+struct userinfo{
+  
+  char valid;
+  char id[17];
+  char password[17];
+};
+
+struct userinfo usertable[10];
+
+
+
+
 // Read the super block.
 void
 readsb(int dev, struct superblock *sb)
@@ -436,7 +449,8 @@ itrunc(struct inode *ip)
 
 // Copy stat information from inode.
 // Caller must hold ip->lock.
-void
+
+void 
 stati(struct inode *ip, struct stat *st)
 {
   st->dev = ip->dev;
@@ -457,12 +471,15 @@ readi(struct inode *ip, char *dst, uint off, uint n)
 
   if(ip->type == T_DEV){
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)
+    {
       return -1;
+    }
     return devsw[ip->major].read(ip, dst, n);
   }
 
-  if(off > ip->size || off + n < off)
+  if(off > ip->size || off + n < off){
     return -1;
+  }
   if(off + n > ip->size)
     n = ip->size - off;
 
@@ -668,3 +685,235 @@ nameiparent(char *path, char *name)
 {
   return namex(path, 1, name);
 }
+
+struct inode*
+create2(char *path, short type, short major, short minor)
+{
+  struct inode *ip, *dp;
+  char name[DIRSIZ];
+
+  if((dp = nameiparent(path, name)) == 0)
+    return 0;
+  ilock(dp);
+
+  if((ip = dirlookup(dp, name, 0)) != 0){
+    iunlockput(dp);
+    ilock(ip);
+    if(type == T_FILE && ip->type == T_FILE)
+      return ip;
+    iunlockput(ip);
+    return 0;
+  }
+
+  if((ip = ialloc(dp->dev, type)) == 0)
+    panic("create: ialloc");
+
+  ilock(ip);
+  ip->major = major;
+  ip->minor = minor;
+  ip->nlink = 1;
+  iupdate(ip);
+
+  if(type == T_DIR){  // Create . and .. entries.
+    dp->nlink++;  // for ".."
+    iupdate(dp);
+    // No ip->nlink++ for ".": avoid cyclic ref count.
+    if(dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
+      panic("create dots");
+  }
+
+  if(dirlink(dp, name, ip->inum) < 0)
+    panic("create: dirlink");
+
+  iunlockput(dp);
+
+  return ip;
+}
+
+
+
+
+int str_len(char* str1)
+{
+   int length = 0;
+
+   while(1){
+     if(str1[length]== '\0')
+       break;
+     length++;
+   }
+   return length;
+}
+
+void str_cpy(char* dst, char* src)
+{
+    int length = strlen(src);
+
+    int i;
+    for(i = 0 ; i < length ; i++)
+       dst[i] = src[i];
+    dst[i] = '\0';
+}
+
+int check_same(char * str1, char* str2)
+{
+   int i;
+   int length = str_len(str1);
+   if (length != str_len(str2)){
+     return -1;
+   }
+   for(i = 0; i <length; i++ ){
+     if(str1[i] != str2[i])
+       return -1;
+   }
+   return 0;
+}
+
+void root_dir(char * path, char * str)
+{
+   int length = str_len(str);
+   int i;
+   path[0] = '/';
+   for(i = 0 ; i < length ; i++)
+     path[i+1] = str[i];
+   path[i+1] = '\0';
+}
+
+int useradd(char * username, char *password)
+{
+    int i;
+    struct inode *ip; 
+    char path[20];  
+
+   
+    //check already same id
+    for(i = 0 ; i < 10; i++)
+    {
+      if(usertable[i].valid && (check_same(username, usertable[i].id) ==0))
+          return -1;
+    }
+    
+    for(i = 0 ; i <10 ; i++){
+      if(usertable[i].valid == 0){
+        usertable[i].valid =1 ;
+        str_cpy(usertable[i].id,username);
+        str_cpy(usertable[i].password,password);
+
+        begin_op();
+        ip = namei("/userlist");
+        
+        // update user table
+        ilock(ip);
+        writei(ip,(char*)&usertable,0,sizeof(usertable));
+        iunlockput(ip);
+
+       //make directory path
+        root_dir(path,username);
+
+        //when there is a same directory 
+       if((ip = create2(path, T_DIR, 0, 0)) == 0){
+           end_op();
+           return 0;
+       } 
+       iunlockput(ip);
+       end_op();
+       return 0;
+     }
+   }
+    //when there is not empty space
+    return -1;
+}
+
+
+int userdel(char * username)
+{
+   int i;
+   struct inode * ip;
+
+   if(check_same(username,"root")==0)
+     return -1;
+   for(i = 0 ; i  < 10 ; i++){
+      if(usertable[i].valid && (check_same(username,usertable[i].id) == 0)){
+          usertable[i].valid =0;
+          begin_op();
+          ip = namei("/userlist");
+          ilock(ip);
+          writei(ip,(char*)&usertable,0,sizeof(usertable));
+          iunlockput(ip);
+          end_op();
+          return 0;
+      }
+   }   
+   return -1;   
+}
+
+
+
+void init_usertable(void)
+{
+  struct inode *ip, * dp; 
+  char path[] = "/userlist";
+  char name[14];
+  int i;
+
+  begin_op();
+
+  ip = namei("/userlist");
+  
+  
+  // There is not userlist 
+  if(ip == 0){
+
+    for(i = 1 ; i < 10 ; i++){
+      usertable[i].valid= 0;
+    }
+    // init root account
+    usertable[0].valid = 1;
+    str_cpy(usertable[0].password,"1234");
+    str_cpy(usertable[0].id,"root");
+
+    if((dp = nameiparent(path, name)) == 0)
+      return;
+
+    ilock(dp);
+    if((ip = ialloc(dp->dev, T_FILE)) == 0)
+       panic("create: ialloc");
+
+    ilock(ip);
+    ip->major = 0;
+    ip->minor = 0;
+    ip->nlink = 1;
+    iupdate(ip);
+
+    if(dirlink(dp, name, ip->inum) < 0)
+       panic("create: dirlink");
+
+    iunlockput(dp);
+
+    writei(ip,(char*)&usertable,0,sizeof(usertable)); 
+   
+   
+
+    iunlockput(ip);
+  }
+
+  // when userlist already exist
+  else{
+   ilock(ip);
+   readi(ip,(char*)&usertable,0,sizeof(usertable));
+
+   cprintf("Debug load file\n");
+   for(i = 0 ; i < 10 ; i ++){
+       if(usertable[i].valid == 1 )
+       {
+           cprintf("id : %s password : %s\n",usertable[i].id, usertable[i].password);
+       }
+   }
+   cprintf("\n");
+   iunlockput(ip);
+  }
+
+  end_op();
+}
+
+
