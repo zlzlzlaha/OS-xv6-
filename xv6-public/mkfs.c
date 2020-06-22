@@ -225,11 +225,16 @@ ialloc(ushort type)
 {
   uint inum = freeinode++;
   struct dinode din;
-
+  uint mode =0;
   bzero(&din, sizeof(din));
   din.type = xshort(type);
   din.nlink = xshort(1);
   din.size = xint(0);
+  strcpy(din.username,"root");
+  if(type == T_DIR || type == T_FILE){
+    mode = mode | MODE_RUSR | MODE_WUSR | MODE_XUSR | MODE_ROTH | MODE_XOTH;
+    din.mode = xint(mode);
+  }
   winode(inum, &din);
   return inum;
 }
