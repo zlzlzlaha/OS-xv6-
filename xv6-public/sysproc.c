@@ -90,4 +90,13 @@ sys_uptime(void)
   return xticks;
 }
 
-   
+int 
+sys_change_user(void)
+{
+  char * str;
+  
+  if(argstr(0,&str) < 0)
+      return -1;
+  return change_user(str);
+}
+  

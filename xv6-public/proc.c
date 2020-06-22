@@ -149,7 +149,7 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-
+  str_cpy(p->username,"root");
   release(&ptable.lock);
 }
 
@@ -213,6 +213,7 @@ fork(void)
   pid = np->pid;
 
   acquire(&ptable.lock);
+  str_cpy(np->username,curproc->username);
 
   np->state = RUNNABLE;
 
@@ -534,6 +535,14 @@ procdump(void)
 }
 
 
+int change_user(char * username)
+{
+   struct proc * p = myproc();
+    
+   if(check_same(p->username,"root") !=0 )
+       return -1;
 
-
-
+   str_cpy(p->username,username);
+   
+   return 0;
+}

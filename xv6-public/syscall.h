@@ -23,3 +23,4 @@
 #define SYS_useradd 22
 #define SYS_userdel 23
 #define SYS_init_usertable 24
+#define SYS_change_user 25

@@ -56,6 +56,9 @@ int             writei(struct inode*, char*, uint, uint);
 int             useradd(char * , char *);
 int             userdel(char *);
 void            init_usertable(void);
+int             str_len(char* );
+void            str_cpy(char*, char*);
+int             check_same(char * str1, char* str2);
 
 // ide.c
 void            ideinit(void);
@@ -124,6 +127,7 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int             change_user(char *);
 
 
 // swtch.S

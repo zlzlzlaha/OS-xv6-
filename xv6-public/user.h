@@ -26,6 +26,9 @@ int uptime(void);
 int useradd(char *, char *);
 int userdel(char *);
 void init_usertable(void);
+int change_user(char * );
+
+
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);

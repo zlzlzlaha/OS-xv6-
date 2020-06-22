@@ -785,7 +785,9 @@ int useradd(char * username, char *password)
     struct inode *ip; 
     char path[20];  
 
-   
+    // only root can add user
+    if(check_same(myproc()->username,"root") != 0)
+        return -1;
     //check already same id
     for(i = 0 ; i < 10; i++)
     {
@@ -830,7 +832,9 @@ int userdel(char * username)
    int i;
    struct inode * ip;
 
-   if(check_same(username,"root")==0)
+
+
+   if(check_same(username,"root")==0 || (check_same(myproc()->username,"root") != 0))
      return -1;
    for(i = 0 ; i  < 10 ; i++){
       if(usertable[i].valid && (check_same(username,usertable[i].id) == 0)){

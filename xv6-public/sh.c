@@ -141,10 +141,23 @@ getcmd(char *buf, int nbuf)
   return 0;
 }
 
+void
+copy(char *dst ,char *src)
+{
+  int length = strlen(src);
+  int i;
+
+  for(i = 0 ; i < length ; i++){
+     dst[i] = src[i]; 
+  }
+  dst[i-1] = '\0';
+}
+
 int
 main(void)
 {
   static char buf[100];
+  char buf2[100];
   int fd;
 
   // Ensure that three file descriptors are open.
@@ -164,6 +177,9 @@ main(void)
         printf(2, "cannot cd %s\n", buf+3);
       continue;
     }
+    copy(buf2,buf);
+    if(strcmp(buf2,"logout") ==0)
+       exit();
     if(fork1() == 0)
       runcmd(parsecmd(buf));
     wait();
